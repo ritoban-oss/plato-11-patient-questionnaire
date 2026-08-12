@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLATO-11 | Sleep Assessment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sky:        #0284c7;
+      --sky-dark:   #0c4a6e;
+      --sky-pale:   #f0f9ff;
+      --sky-light:  #e0f2fe;
+      --purple:     #7c3aed;
+      --purple-pale:#f5f3ff;
+      --teal:       #0891b2;
+      --teal-pale:  #ecfeff;
+      --green:      #059669;
+      --green-pale: #ecfdf5;
+      --bg:         #f8fafc;
+      --surface:    #ffffff;
+      --border:     #e2e8f0;
+      --text:       #0f172a;
+      --muted:      #64748b;
+      --coral:      #dc2626;
+      --font-body:  'DM Sans', system-ui, sans-serif;
+      --font-head:  'DM Serif Display', Georgia, serif;
+      --radius:     12px;
+      --shadow:     0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+      --trans:      200ms ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Fixed header ── */
+    .app-header {
+      background: linear-gradient(135deg, var(--sky-dark), var(--sky));
+      padding: 16px 20px 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-top {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .header-title-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .header-eyebrow { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+    .header-title { font-family: var(--font-head); font-size: 17px; color: #fff; font-weight: 400; line-height: 1.2; }
+    .header-title em { font-style: italic; color: #bae6fd; }
+    .step-counter { font-size: 12px; color: rgba(255,255,255,.65); font-weight: 500; white-space: nowrap; }
+    .step-counter strong { color: #fff; }
+
+    /* ── Step bar ── */
+    .step-bar {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      gap: 4px;
+      padding-bottom: 0;
+    }
+    .step-seg {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding-bottom: 10px;
+      cursor: default;
+    }
+    .step-seg-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,.2);
+      border-radius: 2px;
+      transition: background .3s ease;
+    }
+    .step-seg.done   .step-seg-bar { background: #7dd3fc; }
+    .step-seg.active .step-seg-bar { background: #fff; }
+    .step-seg-label {
+      font-size: 9.5px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.35);
+      transition: color .3s ease;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .step-seg.done   .step-seg-label { color: #7dd3fc; }
+    .step-seg.active .step-seg-label { color: #fff; }
+
+    /* ── Scrollable content ── */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 24px 16px 100px;
+    }
+    .screen-wrap { max-width: 600px; margin: 0 auto; }
+
+    /* ── Screen transitions ── */
+    .screen { display: none; }
+    .screen.active { display: block; animation: slideIn .25s ease; }
+    .screen.back    { display: block; animation: slideInBack .25s ease; }
+    @keyframes slideIn     { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+    @keyframes slideInBack { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
+    /* ── Welcome screen ── */
+    .welcome-hero {
+      text-align: center;
+      padding: 32px 24px 28px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .welcome-icon { font-size: 52px; margin-bottom: 16px; line-height: 1; }
+    .welcome-hero h2 { font-family: var(--font-head); font-size: 24px; color: var(--sky-dark); margin-bottom: 10px; font-weight: 400; }
+    .welcome-hero p { font-size: 14.5px; color: var(--muted); line-height: 1.7; max-width: 420px; margin: 0 auto; }
+    .welcome-hero p strong { color: var(--text); }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Name fields ── */
+    .name-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 20px; margin-bottom: 16px; }
+    .name-card h3 { font-size: 14px; font-weight: 600; color: var(--sky-dark); margin-bottom: 16px; }
+    .name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media(max-width: 420px) { .name-grid { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+    .field input {
+      padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: var(--font-body); font-size: 15px; color: var(--text);
+      background: var(--bg); transition: var(--trans);
+    }
+    .field input:focus { outline: none; border-color: var(--sky); background: #fff; box-shadow: 0 0 0 3px rgba(2,132,199,.12); }
+    .field input.err { border-color: var(--coral); background: #fff5f5; }
+
+    /* ── Section card ── */
+    .section-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .section-head {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-badge {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-head); font-size: 22px; font-weight: 700;
+    }
+    .badge-a { background: var(--purple-pale); color: var(--purple); }
+    .badge-b { background: var(--teal-pale);   color: var(--teal); }
+    .badge-c { background: var(--green-pale);  color: var(--green); }
+    .section-head-text h2 { font-size: 14.5px; font-weight: 600; color: var(--text); line-height: 1.45; }
+    .section-head-text p  { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Scale column headers ── */
+    .scale-cols {
+      display: grid;
+      grid-template-columns: 1fr repeat(5, 60px);
+      gap: 4px;
+      padding: 8px 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    @media(max-width: 500px) { .scale-cols { display: none; } }
+    .col-lbl {
+      font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--muted); text-align: center; line-height: 1.3;
+    }
+    .col-lbl small { display: block; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 9.5px; color: #94a3b8; margin-top: 1px; }
+
+    /* ── Scale item ── */
+    .scale-item {
+      display: grid;
+      grid-template-columns: 1fr repeat(5, 60px);
+      gap: 4px;
+      align-items: center;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--trans);
+    }
+    .scale-item:last-child { border-bottom: none; }
+    .scale-item.answered { background: #f0fdf4; }
+    .scale-item.unanswered { background: #fff7ed; }
+    @media(max-width: 500px) { .scale-item { grid-template-columns: 1fr; gap: 8px; } }
+
+    .item-text { font-size: 14px; color: var(--text); line-height: 1.45; padding-right: 6px; }
+    .item-num  { font-weight: 600; color: var(--muted); margin-right: 5px; }
+
+    /* Desktop radio circle */
+    .radio-col { display: flex; justify-content: center; }
+    .radio-col input[type=radio] { display: none; }
+    .radio-col label {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 2px solid var(--border); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--trans); background: #fff;
+    }
+    .radio-col label:hover { border-color: var(--sky); background: var(--sky-pale); }
+    .radio-col input:checked + label { background: var(--sky); border-color: var(--sky); }
+    .radio-col input:checked + label::after { content: ''; width: 12px; height: 12px; background: #fff; border-radius: 50%; }
+    @media(max-width: 500px) { .radio-col { display: none; } }
+
+    /* Mobile pill buttons */
+    .mobile-pills { display: none; gap: 5px; flex-wrap: nowrap; }
+    @media(max-width: 500px) { .mobile-pills { display: flex; } }
+    .mobile-pills input[type=radio] { display: none; }
+    .mobile-pills label {
+      flex: 1; min-width: 0; padding: 8px 3px; border: 1.5px solid var(--border); border-radius: 8px;
+      text-align: center; cursor: pointer; font-size: 10.5px; font-weight: 500;
+      color: var(--muted); transition: var(--trans); background: #fff; line-height: 1.3;
+    }
+    .mobile-pills label small { display: block; font-size: 9px; color: #94a3b8; font-weight: 400; }
+    .mobile-pills input:checked + label { background: var(--sky); border-color: var(--sky); color: #fff; }
+    .mobile-pills input:checked + label small { color: #bae6fd; }
+
+    /* ── Sleep quality (0–10) ── */
+    .sq-body { padding: 22px 20px 26px; }
+    .sq-question { font-size: 15px; color: var(--text); line-height: 1.6; margin-bottom: 24px; }
+    .sq-question strong { color: var(--green); }
+    .sq-scale { display: flex; gap: 5px; }
+    .sq-scale input[type=radio] { display: none; }
+    .sq-scale label {
+      flex: 1; padding: 13px 2px; text-align: center;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+      color: var(--muted); transition: var(--trans); background: #fff;
+    }
+    .sq-scale label:hover { border-color: var(--green); color: var(--green); }
+    .sq-scale input:checked + label { background: var(--green); border-color: var(--green); color: #fff; }
+    .sq-endpoints { display: flex; justify-content: space-between; margin-top: 10px; }
+    .sq-endpoints span { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+    @media(max-width: 420px) {
+      .sq-scale { gap: 3px; }
+      .sq-scale label { font-size: 14px; padding: 11px 2px; border-radius: 7px; }
+    }
+
+    /* ── Error ── */
+    .err-msg {
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+      padding: 11px 14px; font-size: 13px; color: var(--coral);
+      margin-top: 14px; display: none;
+    }
+    .err-msg.show { display: block; }
+
+    /* ── Fixed nav bar ── */
+    .nav-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      z-index: 100;
+    }
+    .nav-hint { font-size: 12px; color: var(--muted); }
+    .nav-btns { display: flex; gap: 10px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 11px 22px; border-radius: 50px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: var(--trans); border: none;
+    }
+    .btn-back { background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-back:hover { background: #e2e8f0; color: var(--text); }
+    .btn-next { background: var(--sky); color: #fff; box-shadow: 0 3px 12px rgba(2,132,199,.3); }
+    .btn-next:hover { background: var(--sky-dark); }
+    .btn-submit { background: var(--green); color: #fff; box-shadow: 0 3px 12px rgba(5,150,105,.3); }
+    .btn-submit:hover { background: #047857; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Thank you ── */
+    #thankyou { display: none; }
+    #thankyou.show { display: block; }
+    .ty-wrap {
+      max-width: 600px; margin: 0 auto; padding: 48px 20px 80px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .ty-icon {
+      width: 84px; height: 84px; background: var(--green-pale); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 38px;
+      margin-bottom: 24px; animation: pop .45s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .ty-wrap h2 { font-family: var(--font-head); font-size: 26px; color: var(--sky-dark); margin-bottom: 12px; font-weight: 400; }
+    .ty-wrap p { font-size: 15px; color: var(--muted); line-height: 1.7; max-width: 380px; }
+    .ty-wrap .ty-name { font-weight: 600; color: var(--text); }
+    .ty-credit { margin-top: 32px; font-size: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<!-- ── Fixed header ────────────────────────────────────────── -->
+<header class="app-header" id="appHeader">
+  <div class="header-top">
+    <div class="header-title-wrap">
+      <div class="header-eyebrow">PLATO-11 © AASM, 2024</div>
+      <div class="header-title">Sleep Assessment <em>Questionnaire</em></div>
+    </div>
+    <div class="step-counter" id="stepCounter"><strong>1</strong> of 4</div>
+  </div>
+  <div class="step-bar" id="stepBar">
+    <div class="step-seg active" data-step="0">
+      <div class="step-seg-bar"></div>
+      <div class="step-seg-label">Your Name</div>
+    </div>
+    <div class="step-seg" data-step="1">
+      <div class="step-seg-bar"></div>
+      <div class="step-seg-label">Section A</div>
+    </div>
+    <div class="step-seg" data-step="2">
+      <div class="step-seg-bar"></div>
+      <div class="step-seg-label">Section B</div>
+    </div>
+    <div class="step-seg" data-step="3">
+      <div class="step-seg-bar"></div>
+      <div class="step-seg-label">Sleep Quality</div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Scrollable content ──────────────────────────────────── -->
+<div class="content-area" id="contentArea">
+  <div class="screen-wrap">
+
+    <!-- ══ Screen 0: Welcome + Name ═══════════════════════════ -->
+    <div class="screen active" id="screen-0">
+      <div class="welcome-hero">
+        <div class="welcome-icon">🌙</div>
+        <h2>How have you been sleeping?</h2>
+        <p>This short questionnaire asks about your sleep-related experiences <strong>in the past 7 days and nights.</strong> There are no right or wrong answers — just choose what best describes you.</p>
+        <div class="divider"></div>
+        <p style="font-size:13px;">It should take about <strong>2 minutes</strong> to complete.</p>
+      </div>
+      <div class="name-card">
+        <h3>First, please tell us your name</h3>
+        <div class="name-grid">
+          <div class="field">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" placeholder="e.g. Jane" autocomplete="given-name" />
+          </div>
+          <div class="field">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" placeholder="e.g. Smith" autocomplete="family-name" />
+          </div>
+        </div>
+      </div>
+      <div class="err-msg" id="err-0">⚠️ Please enter your first and last name to continue.</div>
+    </div>
+
+    <!-- ══ Screen 1: Section A (8 daytime items) ══════════════ -->
+    <div class="screen" id="screen-1">
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-badge badge-a">A</div>
+          <div class="section-head-text">
+            <h2>In the past 7 days, about how often did you experience the following <em>during the day?</em></h2>
+            <p>Choose the answer that best describes your experience.</p>
+          </div>
+        </div>
+        <div class="scale-cols">
+          <div></div>
+          <div class="col-lbl">Never<small>0 Days</small></div>
+          <div class="col-lbl">Rarely<small>1-2 Days</small></div>
+          <div class="col-lbl">Sometimes<small>3-4 Days</small></div>
+          <div class="col-lbl">Often<small>5-6 Days</small></div>
+          <div class="col-lbl">Always<small>Every Day</small></div>
+        </div>
+        <div id="section-a-items"></div>
+      </div>
+      <div class="err-msg" id="err-1">⚠️ Please answer all questions in this section before continuing.</div>
+    </div>
+
+    <!-- ══ Screen 2: Section B (2 night-time items) ════════════ -->
+    <div class="screen" id="screen-2">
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-badge badge-b">B</div>
+          <div class="section-head-text">
+            <h2>In the past 7 nights, about how often did you experience the following?</h2>
+            <p>Consider your <strong>night-time</strong> experience over the past 7 nights.</p>
+          </div>
+        </div>
+        <div class="scale-cols">
+          <div></div>
+          <div class="col-lbl">Never<small>0 Nights</small></div>
+          <div class="col-lbl">Rarely<small>1-2 Nights</small></div>
+          <div class="col-lbl">Sometimes<small>3-4 Nights</small></div>
+          <div class="col-lbl">Often<small>5-6 Nights</small></div>
+          <div class="col-lbl">Always<small>Every Night</small></div>
+        </div>
+        <div id="section-b-items"></div>
+      </div>
+      <div class="err-msg" id="err-2">⚠️ Please answer both questions before continuing.</div>
+    </div>
+
+    <!-- ══ Screen 3: Section C (sleep quality) ════════════════ -->
+    <div class="screen" id="screen-3">
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-badge badge-c">C</div>
+          <div class="section-head-text">
+            <h2>For the following question, please consider your overall sleep experience in the past 7 nights.</h2>
+          </div>
+        </div>
+        <div class="sq-body">
+          <div class="sq-question">
+            Thinking about the <strong>past 7 nights</strong>, how would you rate your sleep quality?
+          </div>
+          <div class="sq-scale" id="sq-scale"></div>
+          <div class="sq-endpoints">
+            <span>😴 Poor</span>
+            <span>Excellent 😊</span>
+          </div>
+        </div>
+      </div>
+      <div class="err-msg" id="err-3">⚠️ Please rate your sleep quality before submitting.</div>
+    </div>
+
+  </div><!-- /screen-wrap -->
+</div><!-- /content-area -->
+
+<!-- ── Thank you ────────────────────────────────────────────── -->
+<div id="thankyou">
+  <div class="ty-wrap">
+    <div class="ty-icon">✓</div>
+    <h2>Thank you for completing the questionnaire!</h2>
+    <p><span class="ty-name" id="tyName"></span>Your responses have been sent to your care team.</p>
+    <p class="ty-credit">PLATO-11 © AASM, 2024 · United States/English</p>
+  </div>
+</div>
+
+<!-- ── Nav bar ──────────────────────────────────────────────── -->
+<nav class="nav-bar" id="navBar">
+  <div class="nav-hint" id="navHint"></div>
+  <div class="nav-btns">
+    <button class="btn btn-back" id="btnBack" onclick="prevScreen()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      Back
+    </button>
+    <button class="btn btn-next" id="btnNext" onclick="nextScreen()">
+      Next
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    <button class="btn btn-submit" id="btnSubmit" style="display:none" onclick="submitForm()">
+      <span id="submitLabel">Submit</span>
+      <div class="spinner" id="submitSpinner" style="display:none"></div>
+    </button>
+  </div>
+</nav>
+
+<script src="config.js"></script>
+<script>
+/* ── Questions ─────────────────────────────────────────────── */
+const SEC_A = [
+  { id:'a1', text:'I felt tired' },
+  { id:'a2', text:'I felt sleepy' },
+  { id:'a3', text:'I felt exhausted' },
+  { id:'a4', text:'I felt irritable' },
+  { id:'a5', text:'I had morning headaches' },
+  { id:'a6', text:'I nodded off in the middle of participating in an activity' },
+  { id:'a7', text:'I nodded off when I was sitting quietly' },
+  { id:'a8', text:'It was difficult for me to concentrate' },
+];
+const SEC_B = [
+  { id:'b1', text:'I was told that I snored' },
+  { id:'b2', text:'I had difficulty staying asleep' },
+];
+const DAY_OPTS   = [['Never','0 Days'],['Rarely','1-2 Days'],['Sometimes','3-4 Days'],['Often','5-6 Days'],['Always','Every Day']];
+const NIGHT_OPTS = [['Never','0 Nights'],['Rarely','1-2 Nights'],['Sometimes','3-4 Nights'],['Often','5-6 Nights'],['Always','Every Night']];
+
+/* ── Build items ───────────────────────────────────────────── */
+function buildItem(q, num, opts, screen) {
+  const circles = opts.map((o,i) => `
+    <div class="radio-col">
+      <input type="radio" name="${q.id}" id="${q.id}_${i}" value="${i}" onchange="onAnswer('${q.id}',${screen})">
+      <label for="${q.id}_${i}" title="${o[0]}"></label>
+    </div>`).join('');
+
+  const pills = opts.map((o,i) => `
+    <input type="radio" name="${q.id}" id="${q.id}m_${i}" value="${i}" onchange="onAnswer('${q.id}',${screen})">
+    <label for="${q.id}m_${i}">${o[0]}<small>${o[1]}</small></label>`).join('');
+
+  return `<div class="scale-item" id="item-${q.id}">
+    <div class="item-text"><span class="item-num">${num}.</span>${q.text}</div>
+    ${circles}
+    <div class="mobile-pills">${pills}</div>
+  </div>`;
+}
+
+document.getElementById('section-a-items').innerHTML = SEC_A.map((q,i) => buildItem(q,i+1,DAY_OPTS,1)).join('');
+document.getElementById('section-b-items').innerHTML = SEC_B.map((q,i) => buildItem(q,i+1,NIGHT_OPTS,2)).join('');
+
+// Sleep quality 0–10
+document.getElementById('sq-scale').innerHTML = Array.from({length:11},(_,i) =>
+  `<input type="radio" name="sq" id="sq_${i}" value="${i}" onchange="onAnswer('sq',3)">
+   <label for="sq_${i}">${i}</label>`).join('');
+
+/* ── State ─────────────────────────────────────────────────── */
+let currentScreen = 0;
+const TOTAL_SCREENS = 4;
+const HINTS = ['','8 questions about your daytime experience','2 questions about your nights','Rate your overall sleep quality'];
+
+/* ── Step bar ──────────────────────────────────────────────── */
+function updateStepBar() {
+  document.querySelectorAll('.step-seg').forEach((el, i) => {
+    el.classList.remove('active','done');
+    if (i === currentScreen)      el.classList.add('active');
+    else if (i < currentScreen)   el.classList.add('done');
+  });
+  document.getElementById('stepCounter').innerHTML = `<strong>${currentScreen+1}</strong> of ${TOTAL_SCREENS}`;
+  document.getElementById('navHint').textContent = HINTS[currentScreen];
+  document.getElementById('btnBack').style.display   = currentScreen === 0 ? 'none' : '';
+  document.getElementById('btnNext').style.display   = currentScreen === TOTAL_SCREENS - 1 ? 'none' : '';
+  document.getElementById('btnSubmit').style.display = currentScreen === TOTAL_SCREENS - 1 ? '' : 'none';
+}
+
+/* ── Answer feedback ───────────────────────────────────────── */
+function onAnswer(id, screen) {
+  const el = document.getElementById(`item-${id}`);
+  if (el) { el.classList.remove('unanswered'); el.classList.add('answered'); }
+  else { document.querySelector('.sq-body').style.outline = 'none'; }
+  document.getElementById(`err-${screen}`)?.classList.remove('show');
+}
+
+/* ── Navigation ────────────────────────────────────────────── */
+function showScreen(idx, direction) {
+  const current = document.getElementById(`screen-${currentScreen}`);
+  current.className = 'screen';
+  currentScreen = idx;
+  const next = document.getElementById(`screen-${currentScreen}`);
+  next.className = `screen ${direction === 'back' ? 'back' : 'active'}`;
+  updateStepBar();
+  document.getElementById('contentArea').scrollTop = 0;
+}
+
+function validate(screenIdx) {
+  if (screenIdx === 0) {
+    const fn = document.getElementById('first_name'), ln = document.getElementById('last_name');
+    let ok = true;
+    if (!fn.value.trim()) { fn.classList.add('err'); ok = false; } else fn.classList.remove('err');
+    if (!ln.value.trim()) { ln.classList.add('err'); ok = false; } else ln.classList.remove('err');
+    if (!ok) document.getElementById('err-0').classList.add('show');
+    return ok;
+  }
+  if (screenIdx === 1) {
+    const unanswered = SEC_A.filter(q => !document.querySelector(`input[name="${q.id}"]:checked`));
+    unanswered.forEach(q => document.getElementById(`item-${q.id}`)?.classList.add('unanswered'));
+    if (unanswered.length) { document.getElementById('err-1').classList.add('show'); return false; }
+    return true;
+  }
+  if (screenIdx === 2) {
+    const unanswered = SEC_B.filter(q => !document.querySelector(`input[name="${q.id}"]:checked`));
+    unanswered.forEach(q => document.getElementById(`item-${q.id}`)?.classList.add('unanswered'));
+    if (unanswered.length) { document.getElementById('err-2').classList.add('show'); return false; }
+    return true;
+  }
+  if (screenIdx === 3) {
+    if (!document.querySelector('input[name="sq"]:checked')) {
+      document.getElementById('err-3').classList.add('show'); return false;
+    }
+    return true;
+  }
+  return true;
+}
+
+function nextScreen() {
+  if (!validate(currentScreen)) return;
+  if (currentScreen < TOTAL_SCREENS - 1) showScreen(currentScreen + 1, 'forward');
+}
+function prevScreen() {
+  if (currentScreen > 0) showScreen(currentScreen - 1, 'back');
+}
+
+/* ── Submit ────────────────────────────────────────────────── */
+const wordMap = ['Never','Rarely','Sometimes','Often','Always'];
+
+function collectData() {
+  const data = {
+    timestamp:  new Date().toISOString(),
+    first_name: document.getElementById('first_name').value.trim(),
+    last_name:  document.getElementById('last_name').value.trim(),
+  };
+  SEC_A.forEach(q => {
+    const v = document.querySelector(`input[name="${q.id}"]:checked`)?.value ?? '';
+    data[q.id + '_score'] = v;
+    data[q.id + '_label'] = v !== '' ? wordMap[v] : '';
+  });
+  SEC_B.forEach(q => {
+    const v = document.querySelector(`input[name="${q.id}"]:checked`)?.value ?? '';
+    data[q.id + '_score'] = v;
+    data[q.id + '_label'] = v !== '' ? wordMap[v] : '';
+  });
+  data.sleep_quality     = document.querySelector('input[name="sq"]:checked')?.value ?? '';
+  data.section_a_total   = SEC_A.reduce((s,q) => s + (parseInt(document.querySelector(`input[name="${q.id}"]:checked`)?.value)||0), 0);
+  data.section_b_total   = SEC_B.reduce((s,q) => s + (parseInt(document.querySelector(`input[name="${q.id}"]:checked`)?.value)||0), 0);
+  return data;
+}
+
+async function submitForm() {
+  if (!validate(3)) return;
+  if (!SCRIPT_URL || SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+    alert('⚠️ Apps Script URL not configured. Open config.js.'); return;
+  }
+  document.getElementById('submitLabel').style.display = 'none';
+  document.getElementById('submitSpinner').style.display = '';
+  document.getElementById('btnSubmit').disabled = true;
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(collectData())
+    });
+    const first = document.getElementById('first_name').value.trim();
+    document.getElementById('tyName').textContent = first ? `Thank you, ${first}. ` : '';
+    document.getElementById('contentArea').style.display = 'none';
+    document.getElementById('navBar').style.display = 'none';
+    document.getElementById('appHeader').style.display = 'none';
+    document.getElementById('thankyou').classList.add('show');
+  } catch (err) {
+    document.getElementById('submitLabel').style.display = '';
+    document.getElementById('submitSpinner').style.display = 'none';
+    document.getElementById('btnSubmit').disabled = false;
+    alert('⚠️ Submission failed. Please check your connection and try again.');
+  }
+}
+
+/* ── Init ──────────────────────────────────────────────────── */
+updateStepBar();
+</script>
+</body>
+</html>
